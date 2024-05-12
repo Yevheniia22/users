@@ -1,23 +1,36 @@
-#напишіть мені роут, який повертає усіх студентів нашої групи і ще 2 окремі роути ,
-#кожен який повинен повертати ім'я ваших викладачів із софт та теч скілів
-
+from databases import Database
 from fastapi import FastAPI
+from sqlalchemy import MetaData, create_engine, Column, Table, Integer, String
 
+DATABASE_URL = 'sqlite:///test.db'
+DATABASE = create_engine(DATABASE_URL)
+metadata = MetaData()
+database = Database(DATABASE_URL)
 app = FastAPI()
 
-list_students = ["студент1", "студент2", "студент3", "студент4", "студент5",]
+users = Table(
+    'users',
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String),
+    Column('email', String),
+    Column('phone number', String),
+    Column('birthday', String)
+)
 
 
-@app.get('/students/')
-def students():
-    return {'message': list_students}
+@app.on_event('startup')
+async def startup():
+    await database.connect()
 
 
-@app.get('/tech/')
-async def tech():
-    return {'message': 'Maksym'}
+@app.on_event('shutdown')
+async def shutdown():
+    await database.disconnect()
 
 
-@app.get('/soft/')
-async def soft():
-    return {'message': 'Anastasiia'}
+@app.get('/users/{user_id}')
+async def read_user(user_id: int):
+    query = users.select().where(users.c.id == user_id)
+    user = await database.fetch_one(query)
+    return {'user': user}
